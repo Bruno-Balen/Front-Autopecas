@@ -1,5 +1,5 @@
 <template>
-  <q-page padding class="bg-white">
+  <q-page class="q-pa-md page-with-footer bg-white">
     <div class="row items-center justify-between q-mb-lg">
       <div>
         <div class="text-h6 text-bold">Clientes</div>
@@ -37,6 +37,8 @@
       row-key="id"
       flat
       bordered
+      hide-bottom
+      :rows-per-page="itensPorPagina"
       class="shadow-1"
     >
       <template v-slot:body-cell-acoes="props">
@@ -48,37 +50,38 @@
       </template>
     </q-table>
 
-    <div class="row justify-between items-center q-mt-md">
-      <q-btn flat color="black" icon="arrow_back" label="Voltar" @click="voltar" />
+    <div class="fixed-footer">
+      <q-btn class="back-btn" flat color="grey-8" icon="arrow_back" label="Voltar" @click="voltar" />
+
+      <div class="footer-info">
+        <span>Mostrando {{ inicio }}–{{ fim }} de {{ totalItems }}</span>
+      </div>
+
       <q-pagination
         v-model="pagina"
         :max="maxPaginas"
-        color="purple"
-        boundary-numbers
+        color="primary"
+        direction-links
+        boundary-links
       />
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useClientesStore } from 'stores/clientesStore'
+
+const store = useClientesStore()
+const router = useRouter()
 
 const filtro = ref('')
 const ordenarPor = ref('Nome')
 const pagina = ref(1)
-const maxPaginas = 40
+const itensPorPagina = 7
 
 const opcoesOrdenar = ['Nome', 'Cidade', 'Email']
-
-const clientes = ref([
-  { id: 1, nome: 'Jane Cooper', telefone: '(225) 555-0118', email: 'jane@microsoft.com', cidade: 'Chapecó' },
-  { id: 2, nome: 'Floyd Miles', telefone: '(205) 555-0100', email: 'floyd@yahoo.com', cidade: 'Nova Itaberaba' },
-  { id: 3, nome: 'Ronald Richards', telefone: '(302) 555-0107', email: 'ronald@adobe.com', cidade: 'Nova Erechim' },
-  { id: 4, nome: 'Marvin McKinney', telefone: '(252) 555-0126', email: 'marvin@tesla.com', cidade: 'Pinhalzinho' },
-  { id: 5, nome: 'Jerome Bell', telefone: '(629) 555-0129', email: 'jerome@google.com', cidade: 'Chapecó' },
-  { id: 6, nome: 'Kathryn Murphy', telefone: '(406) 555-0120', email: 'kathryn@microsoft.com', cidade: 'Joaçaba' },
-  { id: 7, nome: 'Jacob Jones', telefone: '(208) 555-0112', email: 'jacob@yahoo.com', cidade: 'Concórdia' }
-])
 
 const colunas = [
   { name: 'nome', label: 'Nome', field: 'nome', align: 'left', sortable: true },
@@ -88,30 +91,110 @@ const colunas = [
   { name: 'acoes', label: 'Ações', align: 'center' }
 ]
 
-const clientesFiltrados = computed(() => {
-  return clientes.value.filter(c =>
-    c.nome.toLowerCase().includes(filtro.value.toLowerCase())
-  )
+onMounted(() => {
+  store.carregarClientes()
 })
 
-function novoCliente() {
- 
-  console.log('Novo cliente')
+let _ro = null
+let mo = null
+function updateDrawerWidth() {
+  try {
+    const drawer = document.querySelector('.q-drawer')
+    if (drawer) {
+      const w = Math.round(drawer.getBoundingClientRect().width)
+      document.documentElement.style.setProperty('--app-drawer-width', `${w}px`)
+    } else {
+      document.documentElement.style.setProperty('--app-drawer-width', `0px`)
+    }
+  } catch (e) { console.warn('Não foi possível determinar largura do drawer', e) }
 }
 
-function verCliente(c) {
-  console.log('Ver cliente', c)
-}
+onMounted(() => {
+  updateDrawerWidth()
+  if (window.ResizeObserver) {
+    const drawer = document.querySelector('.q-drawer')
+    if (drawer) {
+      _ro = new ResizeObserver(updateDrawerWidth)
+      _ro.observe(drawer)
+    }
+  }
+  window.addEventListener('resize', updateDrawerWidth)
+  mo = new MutationObserver(updateDrawerWidth)
+  mo.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] })
+})
 
-function editarCliente(c) {
-  console.log('Editar cliente', c)
-}
+onUnmounted(() => {
+  if (_ro && _ro.disconnect) _ro.disconnect()
+  window.removeEventListener('resize', updateDrawerWidth)
+  try { if (mo && mo.disconnect) mo.disconnect() } catch (err) { console.warn('Erro ao desconectar MutationObserver', err) }
+})
 
-function excluirCliente(c) {
-  console.log('Excluir cliente', c)
-}
+const clientesFiltrados = computed(() => {
+  let lista = store.clientes || []
 
-function voltar() {
-  console.log('Voltar')
-}
+  if (filtro.value) {
+    const txt = filtro.value.toLowerCase()
+    lista = lista.filter(c => (
+      (c.nome || '').toLowerCase().includes(txt) ||
+      (c.email || '').toLowerCase().includes(txt) ||
+      (c.cidade || '').toLowerCase().includes(txt)
+    ))
+  }
+
+  if (ordenarPor.value === 'Nome') lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+  if (ordenarPor.value === 'Cidade') lista.sort((a, b) => (a.cidade || '').localeCompare(b.cidade || ''))
+  if (ordenarPor.value === 'Email') lista.sort((a, b) => (a.email || '').localeCompare(b.email || ''))
+
+  const inicio = (pagina.value - 1) * itensPorPagina
+  return lista.slice(inicio, inicio + itensPorPagina)
+})
+
+const maxPaginas = computed(() => Math.ceil((store.clientes || []).length / itensPorPagina))
+
+const totalItems = computed(() => (store.clientes || []).length)
+const inicio = computed(() => Math.min((pagina.value - 1) * itensPorPagina + 1, totalItems.value || 1))
+const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.value))
+
+function novoCliente() { router.push('/app/clientes/nova') }
+function verCliente(c) { router.push(`/app/clientes/${c.id}`) }
+function editarCliente(c) { router.push(`/app/clientes/${c.id}/editar`) }
+function excluirCliente(c) { console.log('Excluir cliente:', c) }
+function voltar() { router.back() }
 </script>
+
+<style scoped>
+.page-with-footer { padding-bottom: 72px; }
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: var(--app-drawer-width, 260px);
+  width: calc(100% - var(--app-drawer-width, 260px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+}
+@media (max-width: 1024px) {
+  .page-with-footer { padding-bottom: 92px; }
+  .fixed-footer { left: 0; width: 100%; flex-direction: column; gap: 6px; padding: 12px; }
+}
+
+.fixed-footer .back-btn {
+  background: #fbf3ea;
+  border-radius: 8px;
+  padding: 8px 18px;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+.fixed-footer .footer-info {
+  flex: 1;
+  text-align: center;
+  color: rgba(0,0,0,0.7);
+  font-size: 14px;
+}
+</style>

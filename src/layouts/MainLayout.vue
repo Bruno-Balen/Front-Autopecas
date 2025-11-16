@@ -73,8 +73,7 @@ const menu = [
   { label: 'Clientes', icon: 'people', to: '/app/clientes' },
   { label: 'Categorias', icon: 'category', to: '/app/categorias' },
   { label: 'Compras', icon: 'shopping_cart', to: '/app/compras' },
-  { label: 'Fornecedores', icon: 'local_shipping', to: '/app/fornecedores' },
-  { label: 'Ajuda', icon: 'help', to: '/app/ajuda' }
+  { label: 'Fornecedores', icon: 'local_shipping', to: '/app/fornecedores' }
 ]
 
 function toggleLeftDrawer() {

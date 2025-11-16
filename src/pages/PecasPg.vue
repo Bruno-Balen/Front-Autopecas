@@ -53,7 +53,12 @@
 
 
     <div class="fixed-footer">
-        <q-btn flat color="grey-8" icon="arrow_back" label="Voltar" @click="voltar" />
+        <q-btn class="back-btn" flat color="grey-8" icon="arrow_back" label="Voltar" @click="voltar" />
+
+        <div class="footer-info">
+          <span>Mostrando {{ inicio }}–{{ fim }} de {{ totalItems }}</span>
+        </div>
+
         <q-pagination
           v-model="pagina"
           :max="paginasTotais"
@@ -161,6 +166,10 @@ const pecasFiltradas = computed(() => {
 
 const paginasTotais = computed(() => Math.ceil(store.pecas.length / itensPorPagina))
 
+const totalItems = computed(() => store.pecas.length)
+const inicio = computed(() => Math.min((pagina.value - 1) * itensPorPagina + 1, totalItems.value || 1))
+const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.value))
+
 
 function aplicarFiltro() {
   pagina.value = 1
@@ -215,6 +224,21 @@ function voltar() {
   background: #ffffff;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 1000;
+}
+
+.fixed-footer .back-btn {
+  background: #fbf3ea; /* tom bege suave */
+  border-radius: 8px;
+  padding: 8px 18px;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+.fixed-footer .footer-info {
+  flex: 1; /* ocupa espaço entre os botões */
+  text-align: center;
+  color: rgba(0,0,0,0.7);
+  font-size: 14px;
 }
 
 @media (max-width: 1024px) {

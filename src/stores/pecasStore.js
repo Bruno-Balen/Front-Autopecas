@@ -14,6 +14,7 @@ export const usePecasStore = defineStore('pecas', {
       this.error = null
       try {
         const data = await PecasService.listar()
+        console.log('Resposta de /Pecas:', data, typeof data)
         let parsed = data
         if (typeof data === 'string') {
           try {
@@ -24,6 +25,7 @@ export const usePecasStore = defineStore('pecas', {
         }
         if (Array.isArray(parsed)) {
           this.pecas = parsed
+          console.log('Peças carregadas:', this.pecas.length)
         } else {
           console.warn('Dados recebidos de /Pecas não são um array:', parsed)
           this.pecas = []
