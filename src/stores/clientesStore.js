@@ -14,14 +14,16 @@ export const useClientesStore = defineStore('clientes', {
       this.error = null
       try {
         const data = await ClientesService.listar()
-        console.log('Resposta de /Clientes:', data, typeof data)
         let parsed = data
         if (typeof data === 'string') {
           try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta /Clientes não é JSON parseável:', e) }
         }
         if (Array.isArray(parsed)) {
-          this.clientes = parsed
-          console.log('Clientes carregados:', this.clientes.length)
+          const normalized = parsed.map(item => {
+            const id = item.id ?? item.idcliente ?? item.IdCliente ?? item.ID ?? item.idCliente
+            return { ...item, id }
+          })
+          this.clientes = normalized
         }
         else {
           console.warn('Dados recebidos de /Clientes não são um array:', parsed)

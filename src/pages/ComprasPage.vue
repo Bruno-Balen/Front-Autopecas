@@ -65,16 +65,25 @@
       />
     </div>
 
-  </q-page>
-</template>
+    <CompraDialog v-model="showCompraDialog" :fornecedores="fornecedoresStore.fornecedores" :pecas="pecasStore.pecas" @save="salvarCompra" @cancel="cancelarCompra" />
 
-<script setup>
+  </q-page>
+  </template>
+
+  <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useComprasStore } from 'stores/comprasStore'
+import CompraDialog from 'components/CompraDialog.vue'
+import { useFornecedoresStore } from 'stores/fornecedoresStore'
+import { usePecasStore } from 'stores/pecasStore'
 
 const store = useComprasStore()
 const router = useRouter()
+const $q = useQuasar()
+const fornecedoresStore = useFornecedoresStore()
+const pecasStore = usePecasStore()
 
 const filtro = ref('')
 const ordenacao = ref('Nome')
@@ -82,6 +91,9 @@ const pagina = ref(1)
 const itensPorPagina = 7
 
 const opcoesOrdenacao = ['Nome', 'Data']
+
+const showCompraDialog = ref(false)
+const editingCompra = ref(null)
 
 const colunas = [
   { name: 'nomeFornecedor', label: 'nomeFornecedor', field: 'nomeFornecedor', align: 'left', sortable: true },
@@ -93,6 +105,9 @@ const colunas = [
 
 onMounted(() => {
   store.carregarCompras()
+  // ensure fornecedores and peças are loaded for dialog options
+  try { if (!fornecedoresStore.fornecedores || !fornecedoresStore.fornecedores.length) fornecedoresStore.carregarFornecedores() } catch { /* ignore */ }
+  try { if (!pecasStore.pecas || !pecasStore.pecas.length) pecasStore.carregarPecas() } catch { /* ignore */ }
 })
 
 let _ro = null
@@ -158,11 +173,39 @@ const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.va
 function aplicarFiltro() { pagina.value = 1 }
 function ordenarCompras() { pagina.value = 1 }
 
-function novaCompra() { router.push('/app/compras/nova') }
-function verCompra(c) { router.push(`/app/compras/${c.id}`) }
-function editarCompra(c) { router.push(`/app/compras/${c.id}/editar`) }
-function excluirCompra(c) { console.log('Excluir compra:', c) }
+function novaCompra() { editingCompra.value = null; showCompraDialog.value = true }
+function verCompra(c) { editingCompra.value = { ...c }; showCompraDialog.value = true }
+function editarCompra(c) { editingCompra.value = { ...c }; showCompraDialog.value = true }
+function excluirCompra(c) {
+  $q.dialog({
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir a compra de "${c.fornecedor || ''}"?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await store.removerCompra(c.id)
+      $q.notify({ type: 'positive', message: 'Compra excluída com sucesso', position: 'top' })
+    } catch (err) {
+      console.error('Erro ao excluir compra:', err)
+      $q.notify({ type: 'negative', message: `Erro ao excluir compra: ${err.message || err}`, position: 'top' })
+    }
+  })
+}
 function voltar() { router.back() }
+
+const salvarCompra = async (payload) => {
+  try {
+    await store.adicionarCompra(payload)
+    $q.notify({ type: 'positive', message: 'Compra salva com sucesso.' })
+    showCompraDialog.value = false
+  } catch (err) {
+    const serverMsg = err?.response?.data || err.message || 'Erro ao salvar compra.'
+    $q.notify({ type: 'negative', message: serverMsg })
+  }
+}
+
+const cancelarCompra = () => { showCompraDialog.value = false }
 </script>
 
 <style scoped>

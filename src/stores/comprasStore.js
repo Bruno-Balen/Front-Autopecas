@@ -14,14 +14,16 @@ export const useComprasStore = defineStore('compras', {
       this.error = null
       try {
         const data = await ComprasService.listar()
-        console.log('Resposta de /Compras:', data, typeof data)
         let parsed = data
         if (typeof data === 'string') {
           try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta /Compras não é JSON parseável:', e) }
         }
         if (Array.isArray(parsed)) {
-          this.compras = parsed
-          console.log('Compras carregadas:', this.compras.length)
+          const normalized = parsed.map(item => {
+            const id = item.id ?? item.idcompra ?? item.idCompra ?? item.IdCompra ?? item.ID
+            return { ...item, id }
+          })
+          this.compras = normalized
         }
         else {
           console.warn('Dados recebidos de /Compras não são um array:', parsed)

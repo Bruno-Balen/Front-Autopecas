@@ -14,14 +14,16 @@ export const useCategoriasStore = defineStore('categorias', {
       this.error = null
       try {
         const data = await CategoriasService.listar()
-        console.log('Resposta de /Categorias:', data, typeof data)
         let parsed = data
         if (typeof data === 'string') {
           try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta /Categorias não é JSON parseável:', e) }
         }
         if (Array.isArray(parsed)) {
-          this.categorias = parsed
-          console.log('Categorias carregadas:', this.categorias.length)
+          const normalized = parsed.map(item => {
+            const id = item.id ?? item.idCategoria ?? item.idcategoria ?? item.IdCategoria ?? item.ID
+            return { ...item, id }
+          })
+          this.categorias = normalized
         }
         else {
           console.warn('Dados recebidos de /Categorias não são um array:', parsed)

@@ -22,6 +22,9 @@ export const ClientesService = {
   },
 
   async remover(id) {
-    await api.delete(`/Clientes/${id}`)
+    if (id === undefined || id === null) {
+      throw new Error('ID do cliente não fornecido para remoção')
+    }
+    await api.delete('/Clientes', { params: { id } })
   }
 }

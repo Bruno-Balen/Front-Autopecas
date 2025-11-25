@@ -22,6 +22,9 @@ export const CategoriasService = {
   },
 
   async remover(id) {
-    await api.delete(`/Categorias/${id}`)
+    if (id === undefined || id === null) {
+      throw new Error('ID da categoria não fornecido para remoção')
+    }
+    await api.delete('/Categorias', { params: { id } })
   }
 }

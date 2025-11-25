@@ -22,6 +22,9 @@ export const PecasService = {
 	},
 
 	async remover(id) {
+		if (id === undefined || id === null) {
+			throw new Error('ID da peça não fornecido para remoção')
+		}
 		await api.delete(`/Pecas/${id}`)
 	}
 }

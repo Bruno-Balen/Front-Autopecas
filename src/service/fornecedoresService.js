@@ -22,6 +22,9 @@ export const FornecedoresService = {
   },
 
   async remover(id) {
+    if (id === undefined || id === null) {
+      throw new Error('ID do fornecedor não fornecido para remoção')
+    }
     await api.delete(`/Fornecedores/${id}`)
   }
 }

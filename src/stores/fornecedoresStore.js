@@ -14,14 +14,16 @@ export const useFornecedoresStore = defineStore('fornecedores', {
       this.error = null
       try {
         const data = await FornecedoresService.listar()
-        console.log('Resposta de /Fornecedores:', data, typeof data)
         let parsed = data
         if (typeof data === 'string') {
           try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta /Fornecedores não é JSON parseável:', e) }
         }
         if (Array.isArray(parsed)) {
-          this.fornecedores = parsed
-          console.log('Fornecedores carregados:', this.fornecedores.length)
+          const normalized = parsed.map(item => {
+            const id = item.id ?? item.idfornecedor ?? item.idFornecedor ?? item.IdFornecedor ?? item.ID
+            return { ...item, id }
+          })
+          this.fornecedores = normalized
         }
         else {
           console.warn('Dados recebidos de /Fornecedores não são um array:', parsed)

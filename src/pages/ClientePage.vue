@@ -66,20 +66,27 @@
       />
     </div>
   </q-page>
+  <cliente-dialog v-model="showClienteDialog" :client="editingClient" @save="salvarCliente" @cancel="cancelarCliente" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { useClientesStore } from 'stores/clientesStore'
+import ClienteDialog from 'components/ClienteDialog.vue'
 
 const store = useClientesStore()
 const router = useRouter()
+const $q = useQuasar()
 
 const filtro = ref('')
 const ordenarPor = ref('Nome')
 const pagina = ref(1)
 const itensPorPagina = 7
+
+const showClienteDialog = ref(false)
+const editingClient = ref(null)
 
 const opcoesOrdenar = ['Nome', 'Cidade', 'Email']
 
@@ -155,11 +162,78 @@ const totalItems = computed(() => (store.clientes || []).length)
 const inicio = computed(() => Math.min((pagina.value - 1) * itensPorPagina + 1, totalItems.value || 1))
 const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.value))
 
-function novoCliente() { router.push('/app/clientes/nova') }
+function novoCliente() { editingClient.value = null; showClienteDialog.value = true }
 function verCliente(c) { router.push(`/app/clientes/${c.id}`) }
 function editarCliente(c) { router.push(`/app/clientes/${c.id}/editar`) }
-function excluirCliente(c) { console.log('Excluir cliente:', c) }
+function excluirCliente(c) {
+  $q.dialog({
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir o cliente "${c.nome}"?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await store.removerCliente(c.id)
+      $q.notify({
+        type: 'positive',
+        message: 'Cliente excluído com sucesso',
+        position: 'top'
+      })
+    } catch (err) {
+      console.error('Erro ao excluir cliente:', err)
+      $q.notify({
+        type: 'negative',
+        message: `Erro ao excluir cliente: ${err.message || err}`,
+        position: 'top'
+      })
+    }
+  })
+}
 function voltar() { router.back() }
+
+async function salvarCliente(payload) {
+  try {
+    const onlyDigits = (v) => (v ? String(v).replace(/\D+/g, '') : undefined)
+    
+    const req = {
+      nome: payload.nome,
+      email: payload.email,
+      telefone: onlyDigits(payload.telefone),
+      cpf: onlyDigits(payload.cpf),
+      ativo: payload.ativo ?? true
+    }
+
+    const raw = payload.dataNascimento || payload.datanascimento || ''
+    if (raw) {
+      const parts = raw.split('/')
+      if (parts.length === 3) {
+        const [dd, mm, yyyy] = parts
+        req.datanascimento = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+      } else {
+        req.datanascimento = raw
+      }
+    }
+
+    await store.adicionarCliente(req)
+    $q.notify({ type: 'positive', message: 'Cliente salvo com sucesso', position: 'top' })
+    showClienteDialog.value = false
+
+    } catch (err) {
+    console.error('Erro ao salvar cliente:', err)
+    let serverMsg = undefined
+    try {
+      if (err && err.response && err.response.data) {
+        serverMsg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data)
+      }
+    } catch { serverMsg = undefined }
+
+    const message = serverMsg || (err && err.message) || 'Erro ao salvar cliente'
+    $q.notify({ type: 'negative', message: `Erro ao salvar cliente: ${message}`, position: 'top' })
+    throw err
+  }
+}
+
+function cancelarCliente() { showClienteDialog.value = false }
 </script>
 
 <style scoped>

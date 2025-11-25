@@ -22,6 +22,9 @@ export const ComprasService = {
   },
 
   async remover(id) {
+    if (id === undefined || id === null) {
+      throw new Error('ID da compra não fornecido para remoção')
+    }
     await api.delete(`/Compras/${id}`)
   }
 }

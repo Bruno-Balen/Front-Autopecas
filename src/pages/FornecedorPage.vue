@@ -66,20 +66,27 @@
     </div>
 
   </q-page>
+  <FornecedorDialog v-model="showFornecedorDialog" :fornecedor="editingFornecedor" @save="salvarFornecedor" @cancel="cancelarFornecedor" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useFornecedoresStore } from 'stores/fornecedoresStore'
+import FornecedorDialog from 'components/FornecedorDialog.vue'
 
 const store = useFornecedoresStore()
+const $q = useQuasar()
 const router = useRouter()
 
 const filtro = ref('')
 const ordenacao = ref('Nome')
 const pagina = ref(1)
 const itensPorPagina = 7
+
+const showFornecedorDialog = ref(false)
+const editingFornecedor = ref(null)
 
 const opcoesOrdenacao = ['Nome', 'Cidade']
 
@@ -158,11 +165,58 @@ const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.va
 function aplicarFiltro() { pagina.value = 1 }
 function ordenarFornecedores() { pagina.value = 1 }
 
-function novoFornecedor() { router.push('/app/fornecedores/nova') }
-function verFornecedor(f) { router.push(`/app/fornecedores/${f.id}`) }
-function editarFornecedor(f) { router.push(`/app/fornecedores/${f.id}/editar`) }
-function excluirFornecedor(f) { console.log('Excluir fornecedor:', f) }
+function novoFornecedor() {
+  editingFornecedor.value = null
+  showFornecedorDialog.value = true
+}
+function verFornecedor(f) {
+  editingFornecedor.value = { ...f }
+  showFornecedorDialog.value = true
+}
+function editarFornecedor(f) {
+  editingFornecedor.value = { ...f }
+  showFornecedorDialog.value = true
+}
+function excluirFornecedor(f) {
+  $q.dialog({
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir o fornecedor "${f.nome || f.razao || f.nomeFantasia || ''}"?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await store.removerFornecedor(f.id)
+      $q.notify({ type: 'positive', message: 'Fornecedor excluído com sucesso', position: 'top' })
+    } catch (err) {
+      console.error('Erro ao excluir fornecedor:', err)
+      $q.notify({ type: 'negative', message: `Erro ao excluir fornecedor: ${err.message || err}`, position: 'top' })
+    }
+  })
+}
 function voltar() { router.back() }
+
+function onlyDigits (s) { return (s || '').toString().replace(/\D+/g, '') }
+
+const salvarFornecedor = async (payload) => {
+  try {
+    const req = {
+      id: payload.id ?? undefined,
+      nome: payload.nome,
+      email: payload.email,
+      telefone: onlyDigits(payload.telefone),
+      cnpj: onlyDigits(payload.cnpj),
+      ativo: payload.ativo ?? true
+    }
+    await store.adicionarFornecedor(req)
+    $q.notify({ type: 'positive', message: 'Fornecedor salvo com sucesso.' })
+    showFornecedorDialog.value = false
+  } catch (err) {
+    const serverMsg = err?.response?.data || err.message || 'Erro ao salvar fornecedor.'
+    $q.notify({ type: 'negative', message: serverMsg })
+  }
+}
+
+const cancelarFornecedor = () => { showFornecedorDialog.value = false }
 </script>
 
 <style scoped>
