@@ -94,7 +94,7 @@ const itensPorPagina = 7
 const opcoesOrdenacao = ['Nome']
 
 const colunas = [
-  { name: 'categoria', label: 'Categoria', field: 'categoria', align: 'left', sortable: true },
+  { name: 'nome', label: 'Categoria', field: 'nome', align: 'left', sortable: true },
   { name: 'descricao', label: 'Descrição', field: 'descricao', align: 'left' },
   { name: 'acoes', label: 'Ações', field: 'acoes', align: 'center' }
 ]

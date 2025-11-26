@@ -11,23 +11,23 @@
         <q-form @submit.prevent="onSave" ref="formRef">
           <div class="q-gutter-md row">
             <div class="col-12">
-              <q-input dense outlined v-model="form.nome" label="Nome completo *" :rules="[ val => !!val || 'Nome é obrigatório' ]" />
+              <q-input dense outlined v-model="form.nome" label="Nome completo *" :rules="[ val => !!val || 'Nome é obrigatório' ]" :readonly="props.viewOnly" />
             </div>
 
             <div class="col-6">
-              <q-input dense outlined v-model="form.email" label="Email *" type="email" :rules="[ val => !!val || 'Email é obrigatório' ]" placeholder="exemplo@email.com" />
+              <q-input dense outlined v-model="form.email" label="Email *" type="email" :rules="[ val => !!val || 'Email é obrigatório' ]" placeholder="exemplo@email.com" :readonly="props.viewOnly" />
             </div>
 
             <div class="col-6">
-              <q-input dense outlined v-model="form.telefone" label="Telefone *" placeholder="(11) 99999-9999" mask="(##) #####-####" />
+              <q-input dense outlined v-model="form.telefone" label="Telefone *" placeholder="(11) 99999-9999" mask="(##) #####-####" :readonly="props.viewOnly" />
             </div>
 
             <div class="col-6">
-              <q-input dense outlined v-model="form.dataNascimento" label="Data de nascimento *" placeholder="dd / mm / aaaa" mask="##/##/####" />
+              <q-input dense outlined v-model="form.dataNascimento" label="Data de nascimento *" placeholder="dd / mm / aaaa" mask="##/##/####" :readonly="props.viewOnly" />
             </div>
 
             <div class="col-6">
-              <q-input dense outlined v-model="form.cpf" label="CPF *" placeholder="000.000.000-00" mask="###.###.###-##" />
+              <q-input dense outlined v-model="form.cpf" label="CPF *" placeholder="000.000.000-00" mask="###.###.###-##" :readonly="props.viewOnly" />
             </div>
           </div>
         </q-form>
@@ -42,7 +42,7 @@
 
         <div>
           <q-btn flat dense color="grey-8" icon="disabled_by_default" label="Cancelar" @click="onCancel" class="q-mr-sm" />
-          <q-btn color="orange" label="Salvar" @click="onSave" />
+          <q-btn v-if="!props.viewOnly" color="orange" label="Salvar" @click="onSave" />
         </div>
       </q-card-actions>
     </q-card>
@@ -55,7 +55,8 @@ import { useQuasar } from 'quasar'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  client: { type: Object, default: null }
+  client: { type: Object, default: null },
+  viewOnly: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue', 'save', 'cancel'])
 
@@ -96,6 +97,7 @@ function validate() {
 }
 
 async function onSave () {
+  if (props.viewOnly) return
   if (!validate()) return
   const payload = { ...form }
   emit('save', payload)

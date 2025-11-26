@@ -66,7 +66,7 @@
       />
     </div>
   </q-page>
-  <cliente-dialog v-model="showClienteDialog" :client="editingClient" @save="salvarCliente" @cancel="cancelarCliente" />
+  <cliente-dialog v-model="showClienteDialog" :client="editingClient" :view-only="viewMode" @save="salvarCliente" @cancel="cancelarCliente" />
 </template>
 
 <script setup>
@@ -87,6 +87,7 @@ const itensPorPagina = 7
 
 const showClienteDialog = ref(false)
 const editingClient = ref(null)
+const viewMode = ref(false)
 
 const opcoesOrdenar = ['Nome', 'Cidade', 'Email']
 
@@ -94,7 +95,6 @@ const colunas = [
   { name: 'nome', label: 'Nome', field: 'nome', align: 'left', sortable: true },
   { name: 'telefone', label: 'Telefone', field: 'telefone', align: 'left' },
   { name: 'email', label: 'Email', field: 'email', align: 'left' },
-  { name: 'cidade', label: 'Cidade', field: 'cidade', align: 'left' },
   { name: 'acoes', label: 'Ações', align: 'center' }
 ]
 
@@ -149,7 +149,6 @@ const clientesFiltrados = computed(() => {
   }
 
   if (ordenarPor.value === 'Nome') lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
-  if (ordenarPor.value === 'Cidade') lista.sort((a, b) => (a.cidade || '').localeCompare(b.cidade || ''))
   if (ordenarPor.value === 'Email') lista.sort((a, b) => (a.email || '').localeCompare(b.email || ''))
 
   const inicio = (pagina.value - 1) * itensPorPagina
@@ -162,9 +161,9 @@ const totalItems = computed(() => (store.clientes || []).length)
 const inicio = computed(() => Math.min((pagina.value - 1) * itensPorPagina + 1, totalItems.value || 1))
 const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.value))
 
-function novoCliente() { editingClient.value = null; showClienteDialog.value = true }
-function verCliente(c) { router.push(`/app/clientes/${c.id}`) }
-function editarCliente(c) { router.push(`/app/clientes/${c.id}/editar`) }
+function novoCliente() { editingClient.value = null; viewMode.value = false; showClienteDialog.value = true }
+function verCliente(c) { editingClient.value = { ...c }; viewMode.value = true; showClienteDialog.value = true }
+function editarCliente(c) { editingClient.value = { ...c }; viewMode.value = false; showClienteDialog.value = true }
 function excluirCliente(c) {
   $q.dialog({
     title: 'Confirmar exclusão',
@@ -214,8 +213,13 @@ async function salvarCliente(payload) {
       }
     }
 
-    await store.adicionarCliente(req)
-    $q.notify({ type: 'positive', message: 'Cliente salvo com sucesso', position: 'top' })
+    if (payload.id) {
+      await store.atualizarCliente(payload.id, req)
+      $q.notify({ type: 'positive', message: 'Cliente atualizado com sucesso', position: 'top' })
+    } else {
+      await store.adicionarCliente(req)
+      $q.notify({ type: 'positive', message: 'Cliente salvo com sucesso', position: 'top' })
+    }
     showClienteDialog.value = false
 
     } catch (err) {

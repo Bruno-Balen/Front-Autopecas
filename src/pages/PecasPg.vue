@@ -65,8 +65,17 @@
           direction-links
           boundary-links
           color="primary"
-        />
-      </div>
+          />
+        </div>
+
+      <peca-dialog
+        v-model="showPecaDialog"
+        :piece="editingPeca"
+        :categories="categoriasStore.categorias"
+        :readonly="readonlyDialog"
+        @save="salvarPeca"
+        @cancel="cancelarPeca"
+      />
 
   </q-page>
 
@@ -74,11 +83,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { usePecasStore } from 'stores/pecasStore'
+import PecaDialog from 'components/PecaDialog.vue'
+import { useCategoriasStore } from 'stores/categoriasStore'
 
 const store = usePecasStore()
 const router = useRouter()
+const $q = useQuasar()
+const categoriasStore = useCategoriasStore()
 
 const filtro = ref('')
 const ordenacao = ref('Nome')
@@ -95,8 +109,13 @@ const colunas = [
   { name: 'acoes', label: 'Ações', field: 'acoes', align: 'center' }
 ]
 
+const showPecaDialog = ref(false)
+const editingPeca = ref(null)
+const readonlyDialog = ref(false)
+
 onMounted(() => {
   store.carregarPecas()
+  categoriasStore.carregarCategorias()
 })
 
 // Ajusta a variável CSS --app-drawer-width conforme a largura do drawer
@@ -148,25 +167,23 @@ onUnmounted(() => {
 })
 
 const pecasFiltradas = computed(() => {
-  let lista = store.pecas
+  let lista = store.pecas || []
 
   if (filtro.value) {
-    lista = lista.filter(p =>
-      p.nome.toLowerCase().includes(filtro.value.toLowerCase())
-    )
+    lista = lista.filter(p => (p.nome || '').toLowerCase().includes(filtro.value.toLowerCase()))
   }
 
-  if (ordenacao.value === 'Nome') lista.sort((a, b) => a.nome.localeCompare(b.nome))
-  if (ordenacao.value === 'Marca') lista.sort((a, b) => a.marca.localeCompare(b.marca))
-  if (ordenacao.value === 'Categoria') lista.sort((a, b) => a.categoria.localeCompare(b.categoria))
+  if (ordenacao.value === 'Nome') lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+  if (ordenacao.value === 'Marca') lista.sort((a, b) => (a.marca || '').localeCompare(b.marca || ''))
+  if (ordenacao.value === 'Categoria') lista.sort((a, b) => (a.categoria || '').localeCompare(b.categoria || ''))
 
   const inicio = (pagina.value - 1) * itensPorPagina
   return lista.slice(inicio, inicio + itensPorPagina)
 })
 
-const paginasTotais = computed(() => Math.ceil(store.pecas.length / itensPorPagina))
+const paginasTotais = computed(() => Math.ceil((store.pecas || []).length / itensPorPagina))
 
-const totalItems = computed(() => store.pecas.length)
+const totalItems = computed(() => (store.pecas || []).length)
 const inicio = computed(() => Math.min((pagina.value - 1) * itensPorPagina + 1, totalItems.value || 1))
 const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.value))
 
@@ -180,25 +197,68 @@ function ordenarPecas() {
 }
 
 function novaPeca() {
-  router.push('/app/pecas/nova')
+  editingPeca.value = null
+  readonlyDialog.value = false
+  showPecaDialog.value = true
 }
 
 function verPeca(peca) {
-  router.push(`/app/pecas/${peca.id}`)
+  editingPeca.value = peca
+  readonlyDialog.value = true
+  showPecaDialog.value = true
 }
 
 function editarPeca(peca) {
-  router.push(`/app/pecas/${peca.id}/editar`)
+  editingPeca.value = peca
+  readonlyDialog.value = false
+  showPecaDialog.value = true
 }
 
 function excluirPeca(peca) {
-
-  console.log('Excluir peça:', peca)
+  $q.dialog({
+    title: 'Confirmar exclusão',
+    message: `Tem certeza que deseja excluir a peça "${peca.nome || peca.name || ''}"?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await store.removerPeca(peca.id)
+      $q.notify({ type: 'positive', message: 'Peça excluída com sucesso', position: 'top' })
+    } catch (err) {
+      console.error('Erro ao excluir peça:', err)
+      let serverMsg = undefined
+      try { if (err && err.response && err.response.data) serverMsg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data) } catch { serverMsg = undefined }
+      const message = serverMsg || (err && err.message) || 'Erro ao excluir peça'
+      $q.notify({ type: 'negative', message: `Erro ao excluir peça: ${message}`, position: 'top' })
+    }
+  })
 }
 
 function voltar() {
   router.back()
 }
+
+async function salvarPeca(payload) {
+  try {
+    if (payload && payload.id) {
+      await store.atualizarPeca(payload.id, payload)
+      $q.notify({ type: 'positive', message: 'Peça atualizada com sucesso', position: 'top' })
+    } else {
+      await store.adicionarPeca(payload)
+      $q.notify({ type: 'positive', message: 'Peça criada com sucesso', position: 'top' })
+    }
+    showPecaDialog.value = false
+  } catch (err) {
+    console.error('Erro ao salvar peça:', err)
+    let serverMsg = undefined
+    try { if (err && err.response && err.response.data) serverMsg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data) } catch { serverMsg = undefined }
+    const message = serverMsg || (err && err.message) || 'Erro ao salvar peça'
+    $q.notify({ type: 'negative', message: `Erro ao salvar peça: ${message}`, position: 'top' })
+    throw err
+  }
+}
+
+function cancelarPeca() { showPecaDialog.value = false }
 </script>
 
 <style scoped>
