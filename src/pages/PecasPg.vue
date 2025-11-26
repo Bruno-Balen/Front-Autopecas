@@ -169,6 +169,15 @@ onUnmounted(() => {
 const pecasFiltradas = computed(() => {
   let lista = store.pecas || []
 
+  lista = lista.map(p => {
+    const cat = categoriasStore.categorias.find(c => c.id === p.idcategoria)
+    return {
+      ...p,
+      categoria: cat ? cat.nome : 'Sem categoria',
+      status: p.status === true ? 'Disponível' : 'Indisponível'
+    }
+  })
+
   if (filtro.value) {
     lista = lista.filter(p => (p.nome || '').toLowerCase().includes(filtro.value.toLowerCase()))
   }

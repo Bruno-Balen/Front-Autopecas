@@ -65,7 +65,7 @@
       />
     </div>
 
-    <CompraDialog v-model="showCompraDialog" :fornecedores="fornecedoresStore.fornecedores" :pecas="pecasStore.pecas" @save="salvarCompra" @cancel="cancelarCompra" />
+    <CompraDialog v-model="showCompraDialog" :purchase="editingCompra" :fornecedores="fornecedoresStore.fornecedores" :pecas="pecasStore.pecas" :readonly="readonlyMode" @save="salvarCompra" @cancel="cancelarCompra" />
 
   </q-page>
   </template>
@@ -94,12 +94,13 @@ const opcoesOrdenacao = ['Nome', 'Data']
 
 const showCompraDialog = ref(false)
 const editingCompra = ref(null)
+const readonlyMode = ref(false)
 
 const colunas = [
   { name: 'nomeFornecedor', label: 'nomeFornecedor', field: 'nomeFornecedor', align: 'left', sortable: true },
   { name: 'descricao', label: 'Descrição', field: 'descricao', align: 'left' },
-  { name: 'data', label: 'Data', field: 'data', align: 'left' },
-  { name: 'total', label: 'Total', field: 'total', align: 'left' },
+  { name: 'datacompra', label: 'Data', field: 'datacompra', align: 'left' },
+  { name: 'valor_total', label: 'Total', field: 'valor_total', align: 'left' },
   { name: 'acoes', label: 'Ações', field: 'acoes', align: 'center' }
 ]
 
@@ -173,9 +174,37 @@ const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.va
 function aplicarFiltro() { pagina.value = 1 }
 function ordenarCompras() { pagina.value = 1 }
 
-function novaCompra() { editingCompra.value = null; showCompraDialog.value = true }
-function verCompra(c) { editingCompra.value = { ...c }; showCompraDialog.value = true }
-function editarCompra(c) { editingCompra.value = { ...c }; showCompraDialog.value = true }
+function novaCompra() { 
+  editingCompra.value = null
+  readonlyMode.value = false
+  showCompraDialog.value = true 
+}
+
+async function verCompra(c) { 
+  try {
+    const compraCompleta = await store.buscarCompraPorId(c.id)
+    console.log('Compra carregada para visualização:', compraCompleta)
+    editingCompra.value = compraCompleta
+    readonlyMode.value = true
+    showCompraDialog.value = true
+  } catch (err) {
+    console.error('Erro ao carregar compra:', err)
+    $q.notify({ type: 'negative', message: `Erro ao carregar compra: ${err.message || err}` })
+  }
+}
+
+async function editarCompra(c) { 
+  try {
+    const compraCompleta = await store.buscarCompraPorId(c.id)
+    console.log('Compra carregada para edição:', compraCompleta)
+    editingCompra.value = compraCompleta
+    readonlyMode.value = false
+    showCompraDialog.value = true
+  } catch (err) {
+    console.error('Erro ao carregar compra:', err)
+    $q.notify({ type: 'negative', message: `Erro ao carregar compra: ${err.message || err}` })
+  }
+}
 function excluirCompra(c) {
   $q.dialog({
     title: 'Confirmar exclusão',
@@ -196,8 +225,15 @@ function voltar() { router.back() }
 
 const salvarCompra = async (payload) => {
   try {
-    await store.adicionarCompra(payload)
-    $q.notify({ type: 'positive', message: 'Compra salva com sucesso.' })
+    if (payload.id) {
+      // Atualizar compra existente
+      await store.atualizarCompra(payload.id, payload)
+      $q.notify({ type: 'positive', message: 'Compra atualizada com sucesso.' })
+    } else {
+      // Criar nova compra
+      await store.adicionarCompra(payload)
+      $q.notify({ type: 'positive', message: 'Compra criada com sucesso.' })
+    }
     showCompraDialog.value = false
   } catch (err) {
     const serverMsg = err?.response?.data || err.message || 'Erro ao salvar compra.'

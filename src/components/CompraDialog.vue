@@ -17,6 +17,8 @@
                   :options="fornecedorOptions"
                   option-label="label"
                   option-value="value"
+                  emit-value
+                  map-options
                   v-model="form.fornecedorId"
                   :disable="readonly"
                 />
@@ -50,7 +52,7 @@
                   <template v-slot:body-cell-peca="props">
                     <q-td>
                       <div v-if="!readonly">
-                        <q-select dense outlined v-model="props.row.pecaId" :options="pecaOptions" option-label="label" option-value="value" />
+                        <q-select dense outlined v-model="props.row.pecaId" :options="pecaOptions" option-label="label" option-value="value" emit-value map-options />
                       </div>
                       <div v-else>
                         {{ findPecaLabel(props.row.pecaId) }}
@@ -113,7 +115,7 @@
         <q-card-section>
           <div class="row q-col-gutter-md">
             <div class="col-6">
-              <q-select dense outlined label="Peça" :options="pecaOptions" option-label="label" option-value="value" v-model="newItem.pecaId" />
+              <q-select dense outlined label="Peça" :options="pecaOptions" option-label="label" option-value="value" emit-value map-options v-model="newItem.pecaId" />
             </div>
             <div class="col-3">
               <q-input dense outlined type="number" label="Quantidade" v-model.number="newItem.quantidade" />
@@ -139,6 +141,7 @@ import { useQuasar } from 'quasar'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
+  purchase: { type: Object, default: null },
   fornecedores: { type: Array, default: () => [] },
   pecas: { type: Array, default: () => [] },
   readonly: { type: Boolean, default: false }
@@ -154,6 +157,7 @@ watch(internalShow, v => emit('update:modelValue', v))
 const formRef = ref(null)
 
 const form = reactive({
+  id: null,
   fornecedorId: null,
   descricao: '',
   itens: []
@@ -167,10 +171,50 @@ watch(() => props.pecas, () => {
   // noop
 })
 
+watch(() => props.purchase, (compra) => {
+  if (compra && (compra.id || compra.idcompra)) {
+    // Editando ou visualizando compra existente
+    form.id = compra.idcompra ?? compra.id
+    form.fornecedorId = compra.idfornecedor ?? compra.fornecedorId ?? compra.idFornecedor
+    form.descricao = compra.descricao || ''
+    
+    console.log('=== Carregando compra ===', compra)
+    console.log('Fornecedor ID:', form.fornecedorId)
+    console.log('Itens recebidos:', compra.itens)
+    console.log('Itens é array?', Array.isArray(compra.itens))
+    console.log('Quantidade de itens:', compra.itens?.length)
+    
+    // Popular itens
+    if (Array.isArray(compra.itens) && compra.itens.length > 0) {
+      form.itens = compra.itens.map((item, index) => {
+        console.log(`Item ${index} original:`, item)
+        const itemFormatado = {
+          _uid: makeRowUid(),
+          pecaId: item.idpecas ?? item.idpeca ?? item.pecaId ?? item.idPeca,
+          quantidade: item.quantidade || 1,
+          valorUnitario: item.valorUnitario ?? item.valorunitario ?? item.valor_unitario ?? 0
+        }
+        console.log(`Item ${index} formatado:`, itemFormatado)
+        return itemFormatado
+      })
+      console.log('Form.itens após mapeamento:', form.itens)
+    } else {
+      console.log('Nenhum item encontrado ou itens não é array')
+      form.itens = []
+    }
+  } else {
+    // Nova compra
+    form.id = null
+    form.fornecedorId = null
+    form.descricao = ''
+    form.itens = []
+  }
+}, { immediate: true })
+
 watch(() => internalShow.value, (v) => {
   if (!v) return
   // reset when opened empty
-  if (!form.fornecedorId && !form.itens.length) {
+  if (!props.purchase && !form.fornecedorId && !form.itens.length) {
     form.descricao = ''
   }
 })
@@ -179,8 +223,23 @@ watch(() => props.modelValue, (v) => {
   if (!v) return
 })
 
-const fornecedorOptions = computed(() => (props.fornecedores || []).map(f => ({ label: f.nome || f.razao || f.nomeFantasia || '', value: f.id ?? f.idfornecedor })))
-const pecaOptions = computed(() => (props.pecas || []).map(p => ({ label: p.nome || p.descricao || '', value: p.id ?? p.idpeca })))
+const fornecedorOptions = computed(() => {
+  const opts = (props.fornecedores || []).map(f => ({ 
+    label: f.nome || f.razao || f.nomeFantasia || '', 
+    value: f.idfornecedor ?? f.id 
+  }))
+  console.log('Fornecedor Options:', opts)
+  return opts
+})
+
+const pecaOptions = computed(() => {
+  const opts = (props.pecas || []).map(p => ({ 
+    label: p.nome || p.descricao || '', 
+    value: p.idpecas ?? p.idpeca ?? p.id 
+  }))
+  console.log('Peça Options:', opts)
+  return opts
+})
 
 let uidCounter = 1
 function makeRowUid() { return `i_${Date.now()}_${uidCounter++}` }
@@ -224,7 +283,7 @@ const total = computed(() => form.itens.reduce((s, it) => s + itemSubtotal(it), 
 function formatMoney(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0)) }
 
 function findPecaLabel(id) {
-  const found = (props.pecas || []).find(p => (p.id ?? p.idpeca) === id)
+  const found = (props.pecas || []).find(p => (p.idpecas ?? p.idpeca ?? p.id) === id)
   return found ? (found.nome || found.descricao || '') : ''
 }
 
@@ -235,8 +294,10 @@ function validate() {
 }
 
 function onSave() {
+  if (props.readonly) return
   if (!validate()) return
   const payload = {
+    id: form.id,
     fornecedorId: form.fornecedorId,
     descricao: form.descricao?.trim(),
     itens: form.itens.map(i => ({ pecaId: i.pecaId, quantidade: Number(i.quantidade), valorUnitario: Number(i.valorUnitario) })),

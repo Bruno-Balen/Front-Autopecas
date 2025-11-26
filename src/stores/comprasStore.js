@@ -36,6 +36,25 @@ export const useComprasStore = defineStore('compras', {
       } finally { this.loading = false }
     },
 
+    async buscarCompraPorId(id) {
+      this.loading = true
+      this.error = null
+      try {
+        const data = await ComprasService.buscarPorId(id)
+        let parsed = data
+        if (typeof data === 'string') {
+          try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta buscarPorId não é JSON parseável:', e) }
+        }
+        // normalizar ID
+        const compraId = parsed.id ?? parsed.idcompra ?? parsed.idCompra ?? parsed.IdCompra ?? parsed.ID
+        return { ...parsed, id: compraId }
+      } catch (err) {
+        console.error('Erro ao buscar compra por ID:', err)
+        this.error = 'Erro ao buscar compra. ' + (err && err.message ? err.message : '')
+        throw err
+      } finally { this.loading = false }
+    },
+
     async adicionarCompra(payload) {
       this.loading = true
       try {
