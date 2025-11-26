@@ -69,17 +69,38 @@ const form = reactive({ id: null, nome: '', descricao: '', marca: '', categoriaI
 
 watch(() => props.piece, (p) => {
   if (p) {
-    form.id = p.id ?? p.idpeca ?? null
+    form.id = p.id ?? p.idpeca ?? p.idpecas ?? null
     form.nome = p.nome ?? p.name ?? ''
     form.descricao = p.descricao ?? p.description ?? ''
     form.marca = p.marca ?? p.marcapeca ?? ''
-    form.categoriaId = p.categoriaId ?? p.categoria?.id ?? p.idCategoria ?? null
+    const catId = p.idcategoria ?? p.categoriaId ?? p.categoria?.id ?? p.idCategoria ?? null
+    
+    if (catId && props.categories) {
+      const cat = props.categories.find(c => (c.idcategoria ?? c.id) === catId)
+      form.categoriaId = cat ? cat.id : catId
+    } else {
+      form.categoriaId = catId
+    }
+    
+    console.log('Peça carregada:', p)
+    console.log('idcategoria da API:', catId)
+    console.log('CategoriaId mapeado para form:', form.categoriaId)
   } else {
     form.id = null; form.nome = ''; form.descricao = ''; form.marca = ''; form.categoriaId = null
   }
 }, { immediate: true })
 
-const categoriaOptions = computed(() => (props.categories || []).map(c => ({ label: c.categoria || c.nome || c.description || '', value: c.id })))
+const categoriaOptions = computed(() => {
+  const opts = (props.categories || []).map(c => {
+    const label = c.categoria || c.nome || c.description || ''
+    const value = c.id
+    console.log('Categoria:', { label, value, original: c })
+    return { label, value }
+  })
+  console.log('Categoria Options final:', opts)
+  console.log('Form categoriaId atual:', form.categoriaId)
+  return opts
+})
 
 function validate() {
   if (!form.nome) { $q.notify({ type: 'negative', message: 'Informe o nome da peça.' }); return false }
@@ -90,8 +111,16 @@ function validate() {
 }
 
 function onSave () {
+  if (props.readonly) return
   if (!validate()) return
-  const payload = { id: form.id, nome: form.nome?.trim(), descricao: form.descricao?.trim(), marca: form.marca?.trim(), categoriaId: form.categoriaId }
+  const payload = { 
+    id: form.id, 
+    nome: form.nome?.trim(), 
+    descricao: form.descricao?.trim(), 
+    marca: form.marca?.trim(), 
+    idcategoria: form.categoriaId,
+    disponivel: true
+  }
   emit('save', payload)
   internalShow.value = false
 }
@@ -104,4 +133,10 @@ function onCancel () {
 
 <style scoped>
 .text-subtitle1 { font-weight: 600 }
+.q-field--readonly .q-field__control {
+  cursor: not-allowed !important;
+}
+.q-field--disabled .q-field__control {
+  cursor: not-allowed !important;
+}
 </style>

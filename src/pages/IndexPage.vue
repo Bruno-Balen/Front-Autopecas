@@ -1,20 +1,10 @@
-<!-- <template>
-  <q-page class="flex flex-center">
- 
-  </q-page>
-</template>
 
-<script setup>
-
-</script> -->
 <template>
   <q-page class="q-pa-lg bg-grey-1">
-    <!-- Greeting -->
     <div class="q-mb-lg">
       <div class="text-h5 text-weight-bold">Ola {{ nomeUsuario }} 👋</div>
     </div>
 
-    <!-- Cards de Totais -->
     <div class="row q-col-gutter-md q-mb-lg">
       <div class="col-12 col-sm-6 col-md-3">
         <q-card class="card-total">
@@ -101,7 +91,6 @@
       </div>
     </div>
 
-    <!-- Top Peças -->
     <div class="row q-col-gutter-md">
       <div class="col-12 col-lg-6">
         <q-card class="chart-card">
@@ -124,7 +113,6 @@
         </q-card>
       </div>
 
-      <!-- Top Categorias -->
       <div class="col-12 col-lg-6">
         <q-card class="chart-card">
           <q-card-section class="bg-grey-8 text-white q-pa-md">

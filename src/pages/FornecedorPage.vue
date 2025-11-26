@@ -66,7 +66,7 @@
     </div>
 
   </q-page>
-  <FornecedorDialog v-model="showFornecedorDialog" :fornecedor="editingFornecedor" @save="salvarFornecedor" @cancel="cancelarFornecedor" />
+  <FornecedorDialog v-model="showFornecedorDialog" :fornecedor="editingFornecedor" :readonly="viewMode" @save="salvarFornecedor" @cancel="cancelarFornecedor" />
 </template>
 
 <script setup>
@@ -87,6 +87,7 @@ const itensPorPagina = 7
 
 const showFornecedorDialog = ref(false)
 const editingFornecedor = ref(null)
+const viewMode = ref(false)
 
 const opcoesOrdenacao = ['Nome', 'Cidade']
 
@@ -167,14 +168,17 @@ function ordenarFornecedores() { pagina.value = 1 }
 
 function novoFornecedor() {
   editingFornecedor.value = null
+  viewMode.value = false
   showFornecedorDialog.value = true
 }
 function verFornecedor(f) {
   editingFornecedor.value = { ...f }
+  viewMode.value = true
   showFornecedorDialog.value = true
 }
 function editarFornecedor(f) {
   editingFornecedor.value = { ...f }
+  viewMode.value = false
   showFornecedorDialog.value = true
 }
 function excluirFornecedor(f) {

@@ -68,8 +68,6 @@ watch(() => props.category, (c) => {
   }
 }, { immediate: true })
 
-const readonly = props.readonly
-
 function validate() {
   if (!form.nome) { $q.notify({ type: 'negative', message: 'Informe o nome da categoria.' }); return false }
   if (!form.descricao) { $q.notify({ type: 'negative', message: 'Informe a descrição.' }); return false }
@@ -77,6 +75,7 @@ function validate() {
 }
 
 function onSave () {
+  if (props.readonly) return
   if (!validate()) return
   const payload = { ...form }
   emit('save', payload)
@@ -92,4 +91,10 @@ function onCancel () {
 <style scoped>
 .q-card-section { background: transparent }
 .text-subtitle1 { font-weight: 600 }
+.q-field--readonly .q-field__control {
+  cursor: not-allowed !important;
+}
+.q-field--disabled .q-field__control {
+  cursor: not-allowed !important;
+}
 </style>

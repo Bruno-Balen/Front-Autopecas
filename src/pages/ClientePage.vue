@@ -214,6 +214,7 @@ async function salvarCliente(payload) {
     }
 
     if (payload.id) {
+      req.id = payload.id
       await store.atualizarCliente(payload.id, req)
       $q.notify({ type: 'positive', message: 'Cliente atualizado com sucesso', position: 'top' })
     } else {

@@ -249,11 +249,20 @@ function voltar() {
 
 async function salvarPeca(payload) {
   try {
+    const req = {
+      nome: payload.nome,
+      descricao: payload.descricao,
+      marca: payload.marca,
+      idcategoria: payload.idcategoria,
+      disponivel: payload.disponivel ?? true
+    }
+    
     if (payload && payload.id) {
-      await store.atualizarPeca(payload.id, payload)
+      // Para atualização, não incluir o ID no body, apenas na URL
+      await store.atualizarPeca(payload.id, req)
       $q.notify({ type: 'positive', message: 'Peça atualizada com sucesso', position: 'top' })
     } else {
-      await store.adicionarPeca(payload)
+      await store.adicionarPeca(req)
       $q.notify({ type: 'positive', message: 'Peça criada com sucesso', position: 'top' })
     }
     showPecaDialog.value = false

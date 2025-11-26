@@ -17,7 +17,7 @@ export const ClientesService = {
   },
 
   async atualizar(id, payload) {
-    const { data } = await api.put(`/Clientes/${id}`, payload)
+    const { data } = await api.put('/Clientes', payload, { params: { id } })
     return data
   },
 

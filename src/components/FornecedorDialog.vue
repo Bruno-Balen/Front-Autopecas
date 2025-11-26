@@ -89,6 +89,7 @@ function validate() {
 function onlyDigits(v) { return v ? String(v).replace(/\D+/g, '') : undefined }
 
 function onSave () {
+  if (props.readonly) return
   if (!validate()) return
   const payload = {
     id: form.id,
@@ -109,4 +110,10 @@ function onCancel () {
 
 <style scoped>
 .text-subtitle1 { font-weight: 600 }
+.q-field--readonly .q-field__control {
+  cursor: not-allowed !important;
+}
+.q-field--disabled .q-field__control {
+  cursor: not-allowed !important;
+}
 </style>

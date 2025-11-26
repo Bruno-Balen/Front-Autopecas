@@ -106,7 +106,6 @@ const colunas = [
 
 onMounted(() => {
   store.carregarCompras()
-  // ensure fornecedores and peças are loaded for dialog options
   try { if (!fornecedoresStore.fornecedores || !fornecedoresStore.fornecedores.length) fornecedoresStore.carregarFornecedores() } catch { /* ignore */ }
   try { if (!pecasStore.pecas || !pecasStore.pecas.length) pecasStore.carregarPecas() } catch { /* ignore */ }
 })
@@ -225,17 +224,24 @@ function voltar() { router.back() }
 
 const salvarCompra = async (payload) => {
   try {
+    const req = {
+      idfornecedor: payload.idfornecedor,
+      descricao: payload.descricao,
+      itens: payload.itens
+    }
+    
+    console.log('Payload formatado:', req)
+    
     if (payload.id) {
-      // Atualizar compra existente
-      await store.atualizarCompra(payload.id, payload)
+      await store.atualizarCompra(payload.id, req)
       $q.notify({ type: 'positive', message: 'Compra atualizada com sucesso.' })
     } else {
-      // Criar nova compra
-      await store.adicionarCompra(payload)
+      await store.adicionarCompra(req)
       $q.notify({ type: 'positive', message: 'Compra criada com sucesso.' })
     }
     showCompraDialog.value = false
   } catch (err) {
+    console.error('Erro completo:', err)
     const serverMsg = err?.response?.data || err.message || 'Erro ao salvar compra.'
     $q.notify({ type: 'negative', message: serverMsg })
   }

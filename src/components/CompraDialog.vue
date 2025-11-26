@@ -164,16 +164,13 @@ const form = reactive({
 })
 
 watch(() => props.fornecedores, () => {
-  // noop, options computed
 })
 
 watch(() => props.pecas, () => {
-  // noop
 })
 
 watch(() => props.purchase, (compra) => {
   if (compra && (compra.id || compra.idcompra)) {
-    // Editando ou visualizando compra existente
     form.id = compra.idcompra ?? compra.id
     form.fornecedorId = compra.idfornecedor ?? compra.fornecedorId ?? compra.idFornecedor
     form.descricao = compra.descricao || ''
@@ -184,7 +181,6 @@ watch(() => props.purchase, (compra) => {
     console.log('Itens é array?', Array.isArray(compra.itens))
     console.log('Quantidade de itens:', compra.itens?.length)
     
-    // Popular itens
     if (Array.isArray(compra.itens) && compra.itens.length > 0) {
       form.itens = compra.itens.map((item, index) => {
         console.log(`Item ${index} original:`, item)
@@ -203,7 +199,6 @@ watch(() => props.purchase, (compra) => {
       form.itens = []
     }
   } else {
-    // Nova compra
     form.id = null
     form.fornecedorId = null
     form.descricao = ''
@@ -213,7 +208,6 @@ watch(() => props.purchase, (compra) => {
 
 watch(() => internalShow.value, (v) => {
   if (!v) return
-  // reset when opened empty
   if (!props.purchase && !form.fornecedorId && !form.itens.length) {
     form.descricao = ''
   }
@@ -298,11 +292,15 @@ function onSave() {
   if (!validate()) return
   const payload = {
     id: form.id,
-    fornecedorId: form.fornecedorId,
+    idfornecedor: form.fornecedorId,
     descricao: form.descricao?.trim(),
-    itens: form.itens.map(i => ({ pecaId: i.pecaId, quantidade: Number(i.quantidade), valorUnitario: Number(i.valorUnitario) })),
-    total: Number(total.value)
+    itens: form.itens.map(i => ({ 
+      idpecas: i.pecaId, 
+      quantidade: Number(i.quantidade), 
+      valorUnitario: Number(i.valorUnitario) 
+    }))
   }
+  console.log('Payload sendo enviado:', payload)
   emit('save', payload)
   internalShow.value = false
 }
@@ -312,10 +310,15 @@ function onCancel() {
   internalShow.value = false
 }
 
-// expose a small API to reset/populate the form from parent if needed
 defineExpose({ form, reset: () => { form.fornecedorId = null; form.descricao = ''; form.itens = [] } })
 </script>
 
 <style scoped>
 .text-subtitle1 { font-weight: 600 }
+.q-field--readonly .q-field__control {
+  cursor: not-allowed !important;
+}
+.q-field--disabled .q-field__control {
+  cursor: not-allowed !important;
+}
 </style>

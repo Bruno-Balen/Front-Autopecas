@@ -20,7 +20,6 @@ export const useDashboardStore = defineStore('dashboard', {
         const pecasStore = usePecasStore()
         const categoriasStore = useCategoriasStore()
 
-        // Garantir que os stores já carregaram os dados
         if (!pecasStore.pecas || pecasStore.pecas.length === 0) {
           await pecasStore.carregarPecas()
         }
@@ -28,10 +27,8 @@ export const useDashboardStore = defineStore('dashboard', {
           await categoriasStore.carregarCategorias()
         }
 
-        // Processar top peças
         this.topPecas = this.processarTopPecas(pecasStore.pecas || [])
 
-        // Processar top categorias
         this.topCategorias = this.processarTopCategorias(categoriasStore.categorias || [])
 
         console.log('Dashboard carregado:', { topPecas: this.topPecas, topCategorias: this.topCategorias })
@@ -48,10 +45,8 @@ export const useDashboardStore = defineStore('dashboard', {
         return this.obterMockPecas()
       }
 
-      // Ordena por um campo de quantidade/vendas se existir, caso contrário pega os 4 primeiros
       const top = pecas.slice(0, 4)
 
-      // Calcular percentual baseado na posição
       const total = top.length
       return top.map((peca, idx) => ({
         nome: peca.nome || `Peça ${idx + 1}`,
@@ -65,10 +60,8 @@ export const useDashboardStore = defineStore('dashboard', {
         return this.obterMockCategorias()
       }
 
-      // Ordena e pega os 4 primeiros
       const top = categorias.slice(0, 4)
 
-      // Calcular percentual baseado na posição
       const total = top.length
       return top.map((cat, idx) => ({
         nome: cat.categoria || `Categoria ${idx + 1}`,

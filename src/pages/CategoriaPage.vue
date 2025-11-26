@@ -69,6 +69,7 @@
     <categoria-dialog
       v-model="showCategoriaDialog"
       :category="editingCategory"
+      :readonly="viewMode"
       @save="salvarCategoria"
       @cancel="cancelarCategoria"
     />
@@ -101,6 +102,7 @@ const colunas = [
 
 const showCategoriaDialog = ref(false)
 const editingCategory = ref(null)
+const viewMode = ref(false)
 
 onMounted(() => { store.carregarCategorias() })
 
@@ -151,9 +153,9 @@ const fim = computed(() => Math.min(pagina.value * itensPorPagina, totalItems.va
 function aplicarFiltro() { pagina.value = 1 }
 function ordenarCategorias() { pagina.value = 1 }
 
-function novaCategoria() { editingCategory.value = null; showCategoriaDialog.value = true }
-function verCategoria(cat) { editingCategory.value = cat; showCategoriaDialog.value = true }
-function editarCategoria(cat) { editingCategory.value = cat; showCategoriaDialog.value = true }
+function novaCategoria() { editingCategory.value = null; viewMode.value = false; showCategoriaDialog.value = true }
+function verCategoria(cat) { editingCategory.value = cat; viewMode.value = true; showCategoriaDialog.value = true }
+function editarCategoria(cat) { editingCategory.value = cat; viewMode.value = false; showCategoriaDialog.value = true }
 
 function excluirCategoria(cat) {
   $q.dialog({ title: 'Confirmar exclusão', message: `Tem certeza que deseja excluir a categoria "${cat.categoria || cat.nome || ''}"?`, cancel: true, persistent: true })
@@ -167,15 +169,25 @@ function voltar() { router.back() }
 
 async function salvarCategoria(payload) {
   try {
-    const req = { categoria: (payload.nome || payload.categoria || '').trim(), descricao: (payload.descricao || '').trim() }
-    const created = await store.adicionarCategoria(req)
-    $q.notify({ type: 'positive', message: 'Categoria salva com sucesso', position: 'top' })
+    const req = { 
+      nome: (payload.nome || payload.categoria || '').trim(), 
+      descricao: (payload.descricao || '').trim() 
+    }
+    
+    if (payload.id) {
+      // Atualização
+      await store.atualizarCategoria(payload.id, req)
+      $q.notify({ type: 'positive', message: 'Categoria atualizada com sucesso', position: 'top' })
+    } else {
+      // Criação
+      await store.adicionarCategoria(req)
+      $q.notify({ type: 'positive', message: 'Categoria criada com sucesso', position: 'top' })
+    }
     showCategoriaDialog.value = false
-    return created
   } catch (err) {
-  console.error('Erro ao salvar categoria:', err)
-  let serverMsg = undefined
-  try { if (err && err.response && err.response.data) serverMsg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data) } catch { serverMsg = undefined }
+    console.error('Erro ao salvar categoria:', err)
+    let serverMsg = undefined
+    try { if (err && err.response && err.response.data) serverMsg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data) } catch { serverMsg = undefined }
     const message = serverMsg || (err && err.message) || 'Erro ao salvar categoria'
     $q.notify({ type: 'negative', message: `Erro ao salvar categoria: ${message}`, position: 'top' })
     throw err

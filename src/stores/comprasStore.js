@@ -45,7 +45,6 @@ export const useComprasStore = defineStore('compras', {
         if (typeof data === 'string') {
           try { parsed = JSON.parse(data) } catch (e) { console.warn('Resposta buscarPorId não é JSON parseável:', e) }
         }
-        // normalizar ID
         const compraId = parsed.id ?? parsed.idcompra ?? parsed.idCompra ?? parsed.IdCompra ?? parsed.ID
         return { ...parsed, id: compraId }
       } catch (err) {
