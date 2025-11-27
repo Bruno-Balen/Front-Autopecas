@@ -224,6 +224,13 @@ function editarPeca(peca) {
 }
 
 function excluirPeca(peca) {
+  const pecaId = peca.id ?? peca.idpecas ?? peca.idPecas ?? peca.idPeca ?? peca.ID
+  
+  if (!pecaId) {
+    $q.notify({ type: 'negative', message: 'ID da peça não encontrado', position: 'top' })
+    return
+  }
+  
   $q.dialog({
     title: 'Confirmar exclusão',
     message: `Tem certeza que deseja excluir a peça "${peca.nome || peca.name || ''}"?`,
@@ -231,7 +238,7 @@ function excluirPeca(peca) {
     persistent: true
   }).onOk(async () => {
     try {
-      await store.removerPeca(peca.id)
+      await store.removerPeca(pecaId)
       $q.notify({ type: 'positive', message: 'Peça excluída com sucesso', position: 'top' })
     } catch (err) {
       console.error('Erro ao excluir peça:', err)
